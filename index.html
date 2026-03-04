@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Stick Dungeons 500</title>
+
+<style>
+body{
+margin:0;
+background:#111;
+color:white;
+font-family:Arial;
+overflow:hidden;
+}
+
+/* HUD */
+#topbar{
+position:absolute;
+top:10px;
+left:10px;
+z-index:10;
+}
+
+.barContainer{
+background:#333;
+width:250px;
+height:20px;
+margin-bottom:5px;
+}
+
+.bar{
+height:100%;
+width:100%;
+background:lime;
+transition:0.3s;
+}
+
+#bossBarContainer{
+position:absolute;
+bottom:10px;
+left:50%;
+transform:translateX(-50%);
+width:500px;
+height:30px;
+background:#333;
+}
+
+#bossHP{
+height:100%;
+width:0%;
+background:red;
+transition:0.3s;
+}
+
+button{
+margin:3px;
+padding:5px;
+background:#222;
+color:white;
+border:1px solid #555;
+cursor:pointer;
+}
+
+button:hover{
+background:#444;
+}
+
+#menu{
+position:absolute;
+right:10px;
+top:10px;
+background:#000a;
+padding:10px;
+border:1px solid #555;
+max-width:250px;
+overflow-y:auto;
+height:90vh;
+}
+
+#game{
+position:absolute;
+top:0;
+left:0;
+width:100%;
+height:100%;
+display:flex;
+justify-content:center;
+align-items:center;
+font-size:30px;
+text-align:center;
+transition:1s;
+}
+
+.bossZone{
+background:radial-gradient(circle, #400 0%, #000 70%);
+}
+
+.normalZone{
+background:#111;
+}
+</style>
+</head>
+
+<body>
+
+<div id="topbar">
+<div class="barContainer">
+<div id="playerHP" class="bar"></div>
+</div>
+<div id="info"></div>
+</div>
+
+<div id="bossBarContainer">
+<div id="bossHP"></div>
+</div>
+
+<div id="game" class="normalZone">
+<div id="zoneText">Zona 1 - Mazmorra</div>
+</div>
+
+<div id="menu">
+<h3>Estadísticas</h3>
+<button onclick="addStat('defense')">+ Defensa</button>
+<button onclick="addStat('sword')">+ Sword</button>
+<button onclick="addStat('gun')">+ Gun</button>
+<button onclick="addStat('core')">+ Núcleo</button>
+
+<hr>
+
+<button onclick="completeMission()">Completar misión (+5 niveles)</button>
+<button onclick="attack('sword')">Atacar Sword</button>
+<button onclick="attack('gun')">Atacar Gun</button>
+<button onclick="attack('core')">Atacar Núcleo</button>
+</div>
+
+<script>
+
+// ===== SONIDOS =====
+let sAmbientNormal = new Audio("ambient-normal.mp3");
+sAmbientNormal.loop = true;
+sAmbientNormal.volume = 0.4;
+
+let sAmbientBoss = new Audio("ambient-boss.mp3");
+sAmbientBoss.loop = true;
+sAmbientBoss.volume = 0.4;
+
+let sSword = new Audio("sword.mp3");
+let sGun = new Audio("gun.mp3");
+let sHit = new Audio("hit.mp3");
+let sLevelUp = new Audio("levelup.mp3");
+
+// ===== DATOS =====
+let player = {
+level:1,
+points:0,
+defense:0,
+sword:0,
+gun:0,
+core:0,
+maxHP:100,
+hp:100
+};
+
+let boss = {
+level:0,
+maxHP:0,
+hp:0,
+active:false
+};
+
+let currentZone = 1;
+const maxZone = 500;
+
+// ===== COMPLETAR MISION =====
+function completeMission(){
+
+if(currentZone >= maxZone){
+alert("¡Llegaste al nivel máximo 500!");
+return;
+}
+
+player.level += 5;
+player.points += 10;
+currentZone++;
+
+sLevelUp.play();
+
+if(currentZone % 10 === 0){
+spawnBoss();
+}
+
+updateUI();
+}
+
+// ===== GENERAR BOSS =====
+function spawnBoss(){
+boss.active = true;
+boss.level = currentZone;
+boss.maxHP = 500 + (boss.level * 50);
+boss.hp = boss.maxHP;
+
+document.getElementById("game").className="bossZone";
+document.getElementById("zoneText").innerText="👑 BOSS ZONA "+currentZone;
+
+sAmbientNormal.pause();
+sAmbientBoss.play().catch(e=>{});
+}
+
+// ===== ATAQUE =====
+function attack(type){
+
+if(!boss.active) return;
+
+let damage = 10;
+
+if(type==="sword"){
+damage += player.sword*3;
+sSword.play();
+}
+
+if(type==="gun"){
+damage += player.gun*3;
+sGun.play();
+}
+
+if(type==="core"){
+damage += player.core*5;
+}
+
+sHit.play();
+
+boss.hp -= damage;
+
+if(boss.hp <= 0){
+boss.hp = 0;
+boss.active=false;
+
+document.getElementById("game").className="normalZone";
+document.getElementById("zoneText").innerText="Zona "+currentZone+" - Mazmorra";
+
+sAmbientBoss.pause();
+sAmbientNormal.play();
+
+alert("¡Boss derrotado!");
+}
+
+updateUI();
+}
+
+// ===== ASIGNAR STATS =====
+function addStat(stat){
+
+if(player.points<=0){
+alert("No tienes puntos");
+return;
+}
+
+player.points--;
+
+if(stat==="defense"){
+player.defense++;
+player.maxHP+=10;
+player.hp=player.maxHP;
+}
+
+if(stat==="sword") player.sword++;
+if(stat==="gun") player.gun++;
+if(stat==="core") player.core++;
+
+updateUI();
+}
+
+// ===== ACTUALIZAR UI =====
+function updateUI(){
+
+document.getElementById("playerHP").style.width=
+(player.hp/player.maxHP*100)+"%";
+
+if(boss.active){
+document.getElementById("bossHP").style.width=
+(boss.hp/boss.maxHP*100)+"%";
+}else{
+document.getElementById("bossHP").style.width="0%";
+}
+
+document.getElementById("info").innerText=
+"Nivel: "+player.level+
+" | Zona: "+currentZone+
+" | Puntos: "+player.points;
+
+if(!boss.active){
+sAmbientBoss.pause();
+sAmbientNormal.play().catch(e=>{});
+}
+}
+
+updateUI();
+
+</script>
+
+</body>
+  </html>
